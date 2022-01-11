@@ -12,6 +12,7 @@ from local_settings import pdf_file
 
 # Settings
 year = 2021
+polish_tax = 0.19
 currency = "usd"
 withholdin_table = "Withholding Tax"
 dividends_table = "Dividends"
@@ -52,7 +53,7 @@ def main():
         
         pln_tax_paid_usa = tax_calc(df_name, cached_rate, df_withholding_tax)
         div_pln = div_calc(df_amount, cached_rate)
-        pol_tax = polish_tax(div_pln)
+        pol_tax = polish_tax_calc(div_pln)
         diff = diff_to_pay(pol_tax, pln_tax_paid_usa)
         print(display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate))
         
@@ -61,9 +62,9 @@ def display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
     for i, j, k, l, m in zip(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
             print("-------")
             print("NBP RATE: " + str(m))
-            print("PLN TAX PAID IN USA: " + str(i))
             print("DIVIDEND PLN: " + str(j))
             print("FULL PL TAX: " + str(k))
+            print("PLN TAX PAID IN USA: " + str(i))
             print("TAX DIFF: " + str(l))
             print("ROUND UP: " + str(ceil(l)))
     
@@ -87,21 +88,21 @@ def tax_calc(df_name, cached_rate, df_withholding_tax):
     pln_tax_paid_usa = []
     if (df_name == withholdin_table):
         for i, j in zip(df_withholding_tax, cached_rate):
-            pln_tax_paid_usa.append(abs(float(i)) * j)
+            pln_tax_paid_usa.append(round(abs(float(i)) * j, 2))
         return pln_tax_paid_usa
         
         
 def div_calc(df_amount, cached_rate):
     div_in_pln = []
     for i, j in zip(df_amount, cached_rate):
-        div_in_pln.append(float(i) * j)
+        div_in_pln.append(round(float(i) * j, 2))
     return div_in_pln
 
         
-def polish_tax(div_pln):
+def polish_tax_calc(div_pln):
     pol = []
     for i in div_pln:
-        pol.append(i * 0.19)
+        pol.append(round(i * polish_tax, 2))
     return pol
         
         
@@ -110,7 +111,7 @@ def diff_to_pay(pol_tax, pln_tax_paid_usa):
     if len(pol_tax) == len(pln_tax_paid_usa):
         for tax_pl, tax_paid in zip(pol_tax, pln_tax_paid_usa):
             difference = tax_pl - tax_paid
-            diff.append(difference)
+            diff.append(round(difference, 2))
         return diff
 
 
