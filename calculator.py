@@ -50,15 +50,15 @@ def main():
         
     previous_b_day = previous_day(df_date)
     previous_b_day_series = pd.Series(previous_b_day)
-    
     cached_rate = cache_nb_rate(previous_b_day_series)
     # cached_rate = [3.9676, 3.8035, 3.9925, 4.1088]
-    
     pln_tax_paid_usa = tax_calc(df_name, cached_rate, df_withholding_tax)
     div_pln = div_calc(df_div_amount, cached_rate)
     pol_tax = polish_tax_calc(div_pln)
     diff = diff_to_pay(pol_tax, pln_tax_paid_usa)
+    
     print(display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate))
+    input('Press ENTER to exit')
         
         
 def previous_day(df_date):
@@ -117,17 +117,19 @@ def diff_to_pay(pol_tax, pln_tax_paid_usa):
             difference = tax_pl - tax_paid
             diff.append(round(difference, 2))
         return diff
-    
+ 
 def display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
-    for i, j, k, l, m in zip(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
-            print("-------")
-            print("NBP RATE: " + str(m))
-            print("DIVIDEND PLN: " + str(j))
-            print("FULL PL TAX: " + str(k))
-            print("PLN TAX PAID IN USA: " + str(i))
-            print("TAX DIFF: " + str(l))
-            print("ROUND UP: " + str(ceil(l)))
-    
+    results = {"NBP RATE" : cached_rate, 
+               "DIVIDEND IN PLN" : div_pln,
+               "POLISH 19% TAX" : pol_tax,
+               "PLN TAX PAID IN USA": pln_tax_paid_usa,
+               "TAX DIFFERENCE" : diff, 
+               "ROUND UP": [ceil(i) for i in diff]}
+    df = pd.DataFrame(results)
+    total = df.iloc[:,1:].sum()
+    df = df.append(total, ignore_index = True)
+    df.to_csv('results.csv', index = False)
+    return df
     
 if __name__ == "__main__":
     main()
