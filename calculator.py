@@ -1,15 +1,17 @@
+# Made by Zooyl
+# https://github.com/zooyl
+
+import os.path
 import requests
 import holidays
 import pdfplumber
 import pandas as pd
+import sys
 
 from pandas.tseries.offsets import CustomBusinessDay
 from pandas.tseries.holiday import AbstractHolidayCalendar, Holiday, previous_workday
 from datetime import datetime
 from math import ceil
-
-from local_settings import pdf_file
-# pdf_file = "path/to/file.pdf"
 
 # Settings
 year = 2021
@@ -18,49 +20,80 @@ currency = "usd"
 withholdin_table = "Withholding Tax"
 dividends_table = "Dividends"
 country = holidays.Poland
+prompt = "Press anything to exit"
 
 class CustomHolidayCalendar(AbstractHolidayCalendar):
     rules = []
     for date, name in sorted(country(years=year).items()):
-        rules.append(Holiday(name, year=date.year, month=date.month, day=date.day, observance=previous_workday))
+        rules.append(Holiday(name, year=date.year, month=date.month, 
+                             day=date.day, observance=previous_workday))
  
 customBD = CustomBusinessDay(calendar=CustomHolidayCalendar())
 
 def main():
     
-    pdf_tax_table = []
-    pdf_div_table = []
-    with pdfplumber.open(pdf_file) as pdf:
-        pages = pdf.pages
-        for i,pg in enumerate(pages):
-            tables = pages[i].extract_tables()
-            for j in tables:
-                if j[0][0] == withholdin_table:
-                    pdf_tax_table.append(j)
-                if j[0][0] == dividends_table:
-                    pdf_div_table.append(j)
+    custom_csv_exists = os.path.exists('input.csv')
+    ib_exists = os.path.exists('ib.pdf')
     
-    for i, j in zip(pdf_tax_table, pdf_div_table):
-        df_tax = pd.DataFrame(i)
-        df_name = df_tax[df_tax.columns[0]][0]
-        df_date = df_tax[df_tax.columns[0]][3:-2]
-        df_withholding_tax = df_tax[df_tax.columns[2]][3:-2]
-        df_div = pd.DataFrame(j)
-        df_div_amount = df_div[df_div.columns[2]][3:-2]
-        
+    if custom_csv_exists:
+        print("Custom csv detected")
+        with open('input.csv') as file:
+            df = pd.read_csv(file)
+            for i in df:
+                df_date = df[df.columns[0]]
+                df_div_amount = df[df.columns[1]]
+                df_withholding_tax = df[df.columns[2]]
+                for i in df.columns:
+                    if i == withholdin_table:
+                        df_name = i
+                        
+    elif ib_exists and custom_csv_exists == False:
+        print("IB pdf detected")
+        pdf_tax_table = []
+        pdf_div_table = []
+        with pdfplumber.open("ib.pdf") as pdf:
+            pages = pdf.pages
+            for i,pg in enumerate(pages):
+                tables = pages[i].extract_tables()
+                for j in tables:
+                    if j[0][0] == withholdin_table:
+                        pdf_tax_table.append(j)
+                    if j[0][0] == dividends_table:
+                        pdf_div_table.append(j)
+            if len(pdf_tax_table) == 0 or len(pdf_div_table) == 0:
+                print(f"Cant find '{withholdin_table}' or '{dividends_table}' table in ib.pdf")
+                input(prompt)
+                sys.exit()
+                            
+            for i, j in zip(pdf_tax_table, pdf_div_table):
+                df_tax = pd.DataFrame(i)
+                df_name = df_tax[df_tax.columns[0]][0]
+                df_date = df_tax[df_tax.columns[0]][3:-2]
+                df_withholding_tax = df_tax[df_tax.columns[2]][3:-2]
+                df_div = pd.DataFrame(j)
+                df_div_amount = df_div[df_div.columns[2]][3:-2]
+    else:
+        print("ib.pdf or input.csv doesn't exist")
+        input(prompt)
+        sys.exit()
+
     previous_b_day = previous_day(df_date)
     previous_b_day_series = pd.Series(previous_b_day)
     cached_rate = cache_nb_rate(previous_b_day_series)
-    # cached_rate = [3.9676, 3.8035, 3.9925, 4.1088]
     pln_tax_paid_usa = tax_calc(df_name, cached_rate, df_withholding_tax)
     div_pln = div_calc(df_div_amount, cached_rate)
     pol_tax = polish_tax_calc(div_pln)
     diff = diff_to_pay(pol_tax, pln_tax_paid_usa)
-    
-    print(display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate))
-    input('Press ENTER to exit')
-        
-        
+    results = display_info(df_date, df_div_amount, df_withholding_tax, previous_b_day, 
+                           pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate)
+    print(results)
+    user_input = input_yesno("Do you want to save results?")
+    if user_input:
+        save_results(results)
+    else:
+        input(prompt)
+        sys.exit()
+            
 def previous_day(df_date):
     previous_day = []
     for i in df_date:
@@ -118,18 +151,46 @@ def diff_to_pay(pol_tax, pln_tax_paid_usa):
             diff.append(round(difference, 2))
         return diff
  
-def display_info(pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
-    results = {"NBP RATE" : cached_rate, 
+def display_info(df_date, df_div_amount, df_withholding_tax, previous_b_day, 
+                 pln_tax_paid_usa, div_pln, pol_tax, diff, cached_rate):
+    results = {"DIVIDEND DATE" : df_date,
+               "DIVIDEND AMOUNT" : df_div_amount,
+               "DIVIDEND TAX (W-8BEN 15%)" : abs(df_withholding_tax.astype(float)),
+               "D-1 DATE" : previous_b_day,
+               "D-1 NBP RATE" : cached_rate, 
                "DIVIDEND IN PLN" : div_pln,
                "POLISH 19% TAX" : pol_tax,
                "PLN TAX PAID IN USA": pln_tax_paid_usa,
                "TAX DIFFERENCE" : diff, 
-               "ROUND UP": [ceil(i) for i in diff]}
+               "URZAD SKARBOWY ROUND UP": [ceil(i) for i in diff]}
     df = pd.DataFrame(results)
-    total = df.iloc[:,1:].sum()
+    total = df.iloc[:,5:].sum()
     df = df.append(total, ignore_index = True)
-    df.to_csv('results.csv', index = False)
     return df
+
+def save_results(df):
+    df.to_csv('results.csv', index = False)
+    csv_exist = os.path.exists('results.csv')
+    if csv_exist:
+        print("'results.csv' created")
+        input(prompt)
+    else:
+        print("Error creating file")
+    return
+    
+def input_yesno(prompt: str) -> bool:
+    full_prompt = f'{prompt} ([Yes]/No): '
+    while True:
+        answer = input(full_prompt).strip()
+        if answer == '':
+            return True
+
+        answer = answer[0].lower()
+        if answer == 'y':
+            return True
+        if answer == 'n':
+            return False
+        print('error')
     
 if __name__ == "__main__":
     main()
