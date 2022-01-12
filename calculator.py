@@ -43,9 +43,6 @@ def main():
                 df_date = df[df.columns[0]]
                 df_div_amount = df[df.columns[1]]
                 df_withholding_tax = df[df.columns[2]]
-                for i in df.columns:
-                    if i == withholdin_table:
-                        df_name = i
                         
     elif ib_exists and custom_csv_exists == False:
         print("IB pdf detected")
@@ -62,25 +59,22 @@ def main():
                         pdf_div_table.append(j)
             if len(pdf_tax_table) == 0 or len(pdf_div_table) == 0:
                 print(f"Cant find '{withholdin_table}' or '{dividends_table}' table in ib.pdf")
-                input(prompt)
-                sys.exit()
+                quit_program()
                             
             for i, j in zip(pdf_tax_table, pdf_div_table):
                 df_tax = pd.DataFrame(i)
-                df_name = df_tax[df_tax.columns[0]][0]
                 df_date = df_tax[df_tax.columns[0]][3:-2]
                 df_withholding_tax = df_tax[df_tax.columns[2]][3:-2]
                 df_div = pd.DataFrame(j)
                 df_div_amount = df_div[df_div.columns[2]][3:-2]
     else:
         print("ib.pdf or input.csv doesn't exist")
-        input(prompt)
-        sys.exit()
+        quit_program()
 
     previous_b_day = previous_day(df_date)
     previous_b_day_series = pd.Series(previous_b_day)
     cached_rate = cache_nb_rate(previous_b_day_series)
-    pln_tax_paid_usa = tax_calc(df_name, cached_rate, df_withholding_tax)
+    pln_tax_paid_usa = tax_calc(cached_rate, df_withholding_tax)
     div_pln = div_calc(df_div_amount, cached_rate)
     pol_tax = polish_tax_calc(div_pln)
     diff = diff_to_pay(pol_tax, pln_tax_paid_usa)
@@ -91,8 +85,7 @@ def main():
     if user_input:
         save_results(results)
     else:
-        input(prompt)
-        sys.exit()
+        quit_program()
             
 def previous_day(df_date):
     previous_day = []
@@ -102,8 +95,12 @@ def previous_day(df_date):
     return previous_day
   
 def convert_date_str_to_timeobject(str_date):
-    obj_date = datetime.strptime(str_date, "%Y-%m-%d")
-    return obj_date
+    try:
+        obj_date = datetime.strptime(str_date, "%Y-%m-%d")
+        return obj_date
+    except ValueError as e:
+        print(f'{e}')
+        quit_program()
       
 def cache_nb_rate(previous_b_day_series):
     nb_rate_list = []
@@ -124,12 +121,11 @@ def get_nb_mid_rate(currency, date):
     except requests.exceptions.HTTPError as err:
         raise SystemExit(err)
 
-def tax_calc(df_name, cached_rate, df_withholding_tax):
+def tax_calc(cached_rate, df_withholding_tax):
     pln_tax_paid_usa = []
-    if (df_name == withholdin_table):
-        for i, j in zip(df_withholding_tax, cached_rate):
-            pln_tax_paid_usa.append(round(abs(float(i)) * j, 2))
-        return pln_tax_paid_usa
+    for i, j in zip(df_withholding_tax, cached_rate):
+        pln_tax_paid_usa.append(round(abs(float(i)) * j, 2))
+    return pln_tax_paid_usa
            
 def div_calc(df_div_amount, cached_rate):
     div_in_pln = []
@@ -173,24 +169,27 @@ def save_results(df):
     csv_exist = os.path.exists('results.csv')
     if csv_exist:
         print("'results.csv' created")
-        input(prompt)
+        quit_program()
     else:
         print("Error creating file")
     return
     
 def input_yesno(prompt: str) -> bool:
-    full_prompt = f'{prompt} ([Yes]/No): '
+    full_prompt = f'{prompt} (yes/no): '
     while True:
         answer = input(full_prompt).strip()
         if answer == '':
             return True
-
         answer = answer[0].lower()
         if answer == 'y':
             return True
         if answer == 'n':
             return False
         print('error')
+        
+def quit_program():
+    input(prompt)
+    sys.exit()
     
 if __name__ == "__main__":
     main()
