@@ -1,5 +1,17 @@
-# Made by Zooyl
+# Tax-calculator
+# Calculate your tax liability from IB statement or your own input in seconds
+# Copyright (C) 2021 by Zooyl
 # https://github.com/zooyl
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 
 import os.path
 import requests
@@ -14,7 +26,7 @@ from datetime import datetime
 from math import ceil
 
 # Settings
-year = 2021
+year = datetime.now().year - 1
 polish_tax = 0.19
 currency = "usd"
 withholdin_table = "Withholding Tax"
@@ -84,6 +96,7 @@ def main():
     user_input = input_yesno("Do you want to save results?")
     if user_input:
         save_results(results)
+        quit_program()
     else:
         quit_program()
             
@@ -169,7 +182,6 @@ def save_results(df):
     csv_exist = os.path.exists('results.csv')
     if csv_exist:
         print("'results.csv' created")
-        quit_program()
     else:
         print("Error creating file")
     return
