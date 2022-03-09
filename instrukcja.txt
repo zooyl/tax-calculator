@@ -14,18 +14,16 @@ dywidenda otrzymana w 2020 moze byc zle policzona, poniewaz kalendarz swiat jest
 Instrukcja:
 Aktualnie istnieja dwa sposoby na przeprowadzenie kalkulacji. 
 
-Pierwszy z nich to przeniesienie pliku pdf od brokera Interactive Brokers do folderu programu.
+Pierwszy z nich to przeniesienie pliku pdf od brokera Interactive Brokers (raport roczny) do folderu programu.
 Program szuka w dokumencie dwoch tabel (Withholding Tax oraz Dividends) na podstawie ktorych dokonuje obliczen.
-(Testowane przy uzyciu activity statement od poczatku do konca roku 2021 (roczny raport nie jest jeszcze dostepny))
 
 Jesli nie korzystamy z uslug tego brokera to korzystamy z kolejnej metody.
 Drugi sposob to wprowadzenie danych wedlug wpisanego juz przykladu do pliku "local_input.csv" oraz zmiana nazwy pliku na "input.csv".
 (w zalozeniu kwoty przyjmowane sa w usd)
 
-Teraz wystarczy uruchomic "calculator.exe" (Windows) lub uruchomic
-skrypt calculator.py jesli korzystamy ze srodowiska developerskiego
-
+Teraz wystarczy uruchomic "calculator.exe" (Windows) lub uruchomic skrypt calculator.py
 Po dokonaniu kalkulacji istnieje mozliwosc zapisania danych do pliku "results.csv"
+
 
 Legenda pliku wyjsciowego "results.csv":
 
@@ -34,11 +32,10 @@ DIVIDEND AMOUNT - kwota ktora otrzymalismy w walucie obcej
 DIVIDEND TAX (W-8BEN 15%) - podatek ktory zaplacilismy u zrodla (15% jesli mamy podpisany formularz W-8BEN mowiacy o uniknieciu podwojnego opodatkowania) podany w walucie obcej
 D-1 DATE - poprzedni dzien roboczy z ktorego obowiazuje sredni kurs waluty do rozliczenia sie z urzedem skarbowym
 D-1 NBP RATE - sredni kurs nbp z poprzedniego dnia roboczego
-DIVIDEND IN PLN - dywidenda ktora otrzymalismy w pln
-POLISH 19% TAX - przeliczona kwota ktora powinnismy zaplacic od otrzymanej dywidendy (kwota w pln)
-PLN TAX PAID IN USA - przeliczony podatek ktory zostal zaplacony u zrodla (kwota w pln)
+DIVIDEND IN PLN - dywidenda ktora otrzymalismy w pln (zaokraglona, patrz Zal.1)
+POLISH 19% TAX - przeliczona kwota ktora powinnismy zaplacic od otrzymanej dywidendy (kwota w pln, zaokraglona wg Zal.1)
+PLN TAX PAID IN USA - przeliczony podatek ktory zostal zaplacony u zrodla (kwota w pln, zaokraglona wg Zal.1)
 TAX DIFFERENCE - roznica miedzy podatkiem ktory zostal pobrany u zrodla (15%), a tym ktory powinnismy zaplacic w polsce (19%) (kwota w pln)
-URZAD SKARBOWY ROUND UP - zaokraglona kwota w gore ktora jestesmy zobowiazani zaplacic do urzedu skarbowego
 
-https://lexlege.pl/ordynacja-podatkowa/art-63/
-https://pasywnyinwestor.pl/w-8ben-sposob-na-nizsze-opodatkowanie-dywidend/
+Zal.1 = https://lexlege.pl/ordynacja-podatkowa/art-63/
+Zal.2 = https://pasywnyinwestor.pl/w-8ben-sposob-na-nizsze-opodatkowanie-dywidend/

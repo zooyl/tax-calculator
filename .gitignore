@@ -15,6 +15,8 @@ local_settings.py
 results.csv
 ib.pdf
 input.csv
+crypto_com.csv
+crypto.py
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
